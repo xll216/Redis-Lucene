@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ssm.mapper.StudentDao">
+
+    <!--配置当前表的二级缓存-->
+    <cache type="com.ssm.cache.RedisCache"/>
+
+    <sql id="studentColumns">
+        id,username,password,address
+    </sql>
+
+    <sql id="usernameSql">
+        <where>
+            1 = 1
+            <if test="username != null and username != '' ">
+                AND username = #{username}
+            </if>
+        </where>
+    </sql>
+
+    <select id="select"
+            parameterType="com.ssm.domain.StudentParamter"
+            resultType="com.ssm.domain.Student">
+        SELECT
+        <include refid="studentColumns"/>
+        FROM student
+        <include refid="usernameSql"/>
+        limit #{pageIndex},#{pageSize}
+    </select>
+
+    <select id="getTotalRecord"
+            parameterType="com.ssm.domain.StudentParamter"
+            resultType="java.lang.Integer">
+        SELECT count(id) FROM Student
+        <include refid="usernameSql"/>
+    </select>
+
+    <select id="selectByID"
+            resultType="com.ssm.domain.Student">
+        SELECT
+        <include refid="studentColumns"/>
+        FROM student
+        WHERE id = #{value}
+    </select>
+
+
+    <select id="selectByName"
+            resultType="com.ssm.domain.Student">
+        SELECT
+        <include refid="studentColumns"/>
+        FROM student
+        WHERE username = #{value}
+    </select>
+
+</mapper>

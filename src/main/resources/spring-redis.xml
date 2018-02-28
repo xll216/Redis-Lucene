@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+       http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
+
+    <!--引入包含redis的属性文件-->
+    <context:property-placeholder
+        location="classpath:db.properties"/>
+
+    <!--配置redis客户端jedis的连接池-->
+    <bean id="jedisPoolConfig"
+          class="redis.clients.jedis.JedisPoolConfig">
+        <!--最大空闲连接数-->
+        <property name="maxIdle" value="${redis.maxIdle}"/>
+
+        <!--最大连接等待的毫秒数-->
+        <property name="maxWaitMillis"
+                  value="${redis.maxWait}"/>
+
+        <!--是否检查数据的有效性-->
+        <property name="testOnBorrow"
+                  value="true"/>
+    </bean>
+
+    <!--jedis客户端的连接工厂对象声明-->
+    <bean id="jedisConnectionFactory"
+          class="org.springframework.data.redis.connection.jedis.JedisConnectionFactory">
+        <!--引入连接池配置-->
+        <property name="poolConfig"
+                  ref="jedisPoolConfig"/>
+        <!--主机地址-->
+        <property name="hostName"
+                  value="${redis.host}"/>
+        <!--端口-->
+        <property name="port"
+                  value="${redis.port}"/>
+        <!--连接密码-->
+        <property name="password"
+                  value="${redis.password}"/>
+        <!--连接超时的毫秒数-->
+        <property name="timeout"
+                  value="${redis.timeout}"/>
+    </bean>
+
+    <!--配置rediscache缓存类中的中间类
+    rediscachetransfer对象-->
+    <bean id="cacheTransfer"
+          class="com.ssm.cache.RedisCacheTransfer">
+        <!--找该类中的set方法 在set方法中给redis缓存类
+        进行工厂注入-->
+        <property name="jedisConnectionFactory"
+                  ref="jedisConnectionFactory"/>
+    </bean>
+
+    <!-- lucene工具 -->
+    <bean id="luceneUtil" class="com.ssm.lucene.LuceneUtil"/>
+
+    <!-- lucene索引定时同步任务  -->
+    <bean id="indexSync"
+          class="org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean">
+        <property name="targetObject" ref="luceneUtil"/>
+        <property name="targetMethod" value="indexSync"/>
+    </bean>
+    <!-- 触发器, 使用定时触发 -->
+    <bean id="luceneTrigger"
+          class="org.springframework.scheduling.quartz.SimpleTriggerFactoryBean">
+        <property name="jobDetail" ref="indexSync"/>
+        <property name="startDelay" value="60000"/><!-- 调度工厂实例化后，经过60s开始执行调度 -->
+        <property name="repeatInterval" value="7200000"/><!-- 每2小时调度一次 -->
+    </bean>
+
+    <!-- 配置调度工厂 -->
+    <bean class="org.springframework.scheduling.quartz.SchedulerFactoryBean">
+        <property name="triggers">
+            <list>
+                <ref bean="luceneTrigger"/>
+            </list>
+        </property>
+    </bean>
+
+</beans>
